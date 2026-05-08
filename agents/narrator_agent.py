@@ -1,19 +1,19 @@
-from utils.ollama_client import ask_ollama
+from utils.helpers import rand
+
+CONNECTORS = [
+    "Üstelik,", "Bunun yanında,", "Ve işte o an,", "Tam da bu sırada,",
+]
 
 class NarratorAgent:
-    def narrate(self, world: str, story: str, enemy: str, loot: str) -> str:
-        combined = f"""
-Dünya: {world}
-Hikaye: {story}
-Düşman: {enemy}
-Ödül: {loot}
-"""
-        return ask_ollama(
-            prompt=combined,
-            system=(
-                "Sen bir RPG anlatıcısısın. "
-                "Verilen tüm bilgileri birleştirip oyuncuya "
-                "akıcı, heyecanlı 4-5 cümlelik bir sahne sun. "
-                "Türkçe yaz. Son cümle oyuncuya ne yapacağını sor."
-            )
-        )
+    def run(self, world: str, story: str, enemy: dict, loot: dict, battle_result: str) -> str:
+        connector = rand(CONNECTORS)
+        lines = [
+            f"🌍 {world}",
+            f"",
+            f"📖 {story}",
+            f"",
+            f"{connector} {enemy['emoji']} {enemy['name']} karşında!",
+            f"",
+            f"⚔️  {battle_result}",
+        ]
+        return "\n".join(lines)
