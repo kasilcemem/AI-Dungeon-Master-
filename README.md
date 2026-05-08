@@ -1,15 +1,18 @@
-# 🐉 AI Dungeon Master
+# 🐉 AI Dungeon Master — Paralel Ajan RPG
 
-Paralel ajan sistemiyle çalışan tarayıcı tabanlı RPG oyunu.
-Kurulum yok, terminal yok, tamamen ücretsiz.
+API yok, internet yok, kurulum yok. Saf Python!
 
-## Oynamak için
-GitHub Pages'i aç: Settings → Pages → main branch → Save
-
-## Ajanlar (paralel çalışır)
+## Ajanlar (ThreadPoolExecutor ile paralel çalışır)
 | Ajan | Görev |
 |------|-------|
-| 🌍 World | Ortamı oluşturur |
-| 📖 Story | Hikayeyi ilerletir |
-| 👹 Enemy | Düşman belirler |
-| 💎 Loot | Ödül oluşturur |
+| 🌍 WorldAgent | Ortamı oluşturur |
+| 📖 StoryAgent | Hikayeyi ilerletir |
+| 👹 EnemyAgent | Düşman belirler |
+| 💎 LootAgent | Ödül oluşturur |
+| 🎙 NarratorAgent | Hepsini birleştirir |
+
+## Çalıştırma
+```bash
+pip install colorama
+python main.py
+```
