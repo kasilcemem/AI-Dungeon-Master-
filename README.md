@@ -1,7 +1,10 @@
-# 🐉 AI Dungeon Master — Paralel Ajan RPG
+# 🐉 AI Dungeon Master
 
-Tamamen ücretsiz, yerel çalışan metin tabanlı RPG oyunu.
-5 AI ajanı paralel çalışarak her sahneyi oluşturur.
+Paralel ajan sistemiyle çalışan tarayıcı tabanlı RPG oyunu.
+Kurulum yok, terminal yok, tamamen ücretsiz.
+
+## Oynamak için
+GitHub Pages'i aç: Settings → Pages → main branch → Save
 
 ## Ajanlar (paralel çalışır)
 | Ajan | Görev |
@@ -10,11 +13,3 @@ Tamamen ücretsiz, yerel çalışan metin tabanlı RPG oyunu.
 | 📖 Story | Hikayeyi ilerletir |
 | 👹 Enemy | Düşman belirler |
 | 💎 Loot | Ödül oluşturur |
-| 🎙 Narrator | Hepsini birleştirir |
-
-## Kurulum
-1. [ollama.com](https://ollama.com)'dan Ollama kur
-2. `ollama pull llama3.2`
-3. `pip install requests`
-4. `ollama serve` (Terminal 1)
-5. `python main.py` (Terminal 2)
