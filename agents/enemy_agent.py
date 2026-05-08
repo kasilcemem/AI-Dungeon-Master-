@@ -1,16 +1,25 @@
-from utils.ollama_client import ask_ollama
 import random
+from utils.helpers import rand, randint
+
+ENEMIES = [
+    {"name": "Goblin",    "emoji": "👺", "base_hp": 30, "base_atk": 8,  "xp": 25},
+    {"name": "Troll",     "emoji": "👾", "base_hp": 60, "base_atk": 15, "xp": 50},
+    {"name": "Vampir",    "emoji": "🧛", "base_hp": 45, "base_atk": 12, "xp": 40},
+    {"name": "Ejderha",   "emoji": "🐉", "base_hp": 100,"base_atk": 25, "xp": 100},
+    {"name": "Örümcek",   "emoji": "🕷️", "base_hp": 20, "base_atk": 6,  "xp": 15},
+    {"name": "Canavar",   "emoji": "👿", "base_hp": 80, "base_atk": 20, "xp": 75},
+    {"name": "Zombi",     "emoji": "🧟", "base_hp": 35, "base_atk": 10, "xp": 30},
+    {"name": "Cadı",      "emoji": "🧙", "base_hp": 40, "base_atk": 18, "xp": 45},
+]
 
 class EnemyAgent:
-    def encounter(self, location: str, player_level: int) -> dict:
-        response = ask_ollama(
-            prompt=f"Konum: {location}, Oyuncu seviyesi: {player_level}",
-            system=(
-                "Sen bir RPG düşman tasarımcısısın. "
-                "Bu konuma uygun bir düşman oluştur. "
-                "Sadece şu formatta yaz:\n"
-                "İsim: ...\nHP: ...\nGüç: ...\nTanım: ..."
-            )
-        )
-        enemy = {"raw": response, "hp": random.randint(20, 50) + player_level * 5}
-        return enemy
+    def run(self, player_level: int) -> dict:
+        base = rand(ENEMIES)
+        scale = 1 + (player_level - 1) * 0.2
+        return {
+            "name": base["name"],
+            "emoji": base["emoji"],
+            "hp": int(base["base_hp"] * scale),
+            "atk": int(base["base_atk"] * scale),
+            "xp": base["xp"],
+        }
