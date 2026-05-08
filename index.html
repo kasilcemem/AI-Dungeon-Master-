@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>AI Dungeon Master</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0f; color: #c9b89a; font-family: Georgia, serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem 1rem; }
+  h1 { font-size: 2rem; color: #e8c87a; margin-bottom: 0.5rem; text-shadow: 0 0 20px #e8c87a44; }
+  .subtitle { color: #666; font-size: 0.85rem; margin-bottom: 2rem; }
+  .game-box { width: 100%; max-width: 700px; }
+  .story { background: #111118; border: 1px solid #2a2a3a; border-radius: 8px; padding: 1.5rem; min-height: 200px; margin-bottom: 1rem; line-height: 1.8; font-size: 0.95rem; }
+  .agents { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }
+  .agent { background: #111118; border: 1px solid #2a2a3a; border-radius: 6px; padding: 0.6rem; text-align: center; font-size: 0.75rem; transition: all 0.3s; }
+  .agent.running { border-color: #e8c87a; color: #e8c87a; box-shadow: 0 0 10px #e8c87a22; }
+  .agent.done { border-color: #4a9; color: #4a9; }
+  .agent-icon { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+  .stats { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .stat { background: #111118; border: 1px solid #2a2a3a; border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.85rem; }
+  .stat span { color: #e8c87a; font-weight: bold; }
+  .input-row { display: flex; gap: 8px; }
+  input[type=text] { flex: 1; background: #111118; border: 1px solid #2a2a3a; border-radius: 6px; padding: 0.7rem 1rem; color: #c9b89a; font-family: Georgia, serif; font-size: 0.9rem; outline: none; }
+  input[type=text]:focus { border-color: #e8c87a44; }
+  button { background: #1a1a2e; border: 1px solid #e8c87a44; color: #e8c87a; padding: 0.7rem 1.5rem; border-radius: 6px; cursor: pointer; font-family: Georgia, serif; transition: all 0.2s; }
+  button:hover { background: #e8c87a22; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .log { margin-top: 1rem; max-height: 120px; overflow-y: auto; font-size: 0.8rem; color: #555; }
+  .log div { padding: 2px 0; border-bottom: 1px solid #1a1a1a; }
+  .setup { background: #111118; border: 1px solid #2a2a3a; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .setup input { width: 100%; background: #0a0a0f; border: 1px solid #2a2a3a; border-radius: 6px; padding: 0.6rem 1rem; color: #c9b89a; font-family: Georgia, serif; margin: 0.5rem 0 1rem; outline: none; }
+  .tag { display: inline-block; background: #1a1a2e; border: 1px solid #333; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; margin: 2px; color: #888; }
+  .inventory { margin-top: 0.5rem; min-height: 24px; }
+</style>
+</head>
+<body>
+
+<h1>🐉 AI Dungeon Master</h1>
+<p class="subtitle">5 paralel ajan • Tamamen ücretsiz • Kurulum yok</p>
+
+<div class="game-box">
+
+  <div class="setup" id="setup">
+    <div style="font-size:0.9rem; margin-bottom:0.5rem; color:#888">Kahraman adın:</div>
+    <input type="text" id="heroName" placeholder="Adını gir..." maxlength="20">
+    <button onclick="startGame()" style="width:100%">⚔️ Maceraya Başla</button>
+  </div>
+
+  <div id="gameArea" style="display:none">
+    <div class="stats">
+      <div class="stat">👤 <span id="statName">—</span></div>
+      <div class="stat">❤️ HP: <span id="statHp">100</span></div>
+      <div class="stat">⭐ Lv: <span id="statLv">1</span></div>
+      <div class="stat">✨ XP: <span id="statXp">0</span></div>
+      <div class="stat">📍 <span id="statLoc">Karanlık Orman</span></div>
+    </div>
+
+    <div class="inventory" id="inventoryRow"></div>
+
+    <div class="agents">
+      <div class="agent" id="ag-world"><span class="agent-icon">🌍</span>World</div>
+      <div class="agent" id="ag-story"><span class="agent-icon">📖</span>Story</div>
+      <div class="agent" id="ag-enemy"><span class="agent-icon">👹</span>Enemy</div>
+      <div class="agent" id="ag-loot"><span class="agent-icon">💎</span>Loot</div>
+    </div>
+
+    <div class="story" id="storyBox">Karanlık ormanın derinliklerinden bir ses geliyor... Ne yapıyorsun?</div>
+
+    <div class="input-row" style="margin-top:1rem">
+      <input type="text" id="actionInput" placeholder="Ne yapıyorsun?" onkeydown="if(event.key==='Enter') takeAction()">
+      <button id="actionBtn" onclick="takeAction()">▶ Yap</button>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+</div>
+
+<script>
+const LOCATIONS = ["Karanlık Orman","Taş Köprü","Ejderha Mağarası","Büyücü Kulesi","Sisli Bataklık","Antik Tapınak","Kaya Kalesi","Büyülü Çarşı"];
+const ENEMIES = [
+  {name:"Goblin",hp:30,atk:8,xp:25,emoji:"👺"},
+  {name:"Troll",hp:60,atk:15,xp:50,emoji:"👾"},
+  {name:"Vampir",hp:45,atk:12,xp:40,emoji:"🧛"},
+  {name:"Ejderha",hp:100,atk:25,xp:100,emoji:"🐉"},
+  {name:"Örümcek",hp:20,atk:6,xp:15,emoji:"🕷️"},
+  {name:"Canavar",hp:80,atk:20,xp:75,emoji:"👿"},
+];
+const ITEMS = ["Kılıç +1","Kalkan","Sağlık İksiri","Büyü Kitabı","Altın Kupa","Gizem Haritası","Ejderha Taşı","Işık Feneri"];
+const STORY_TEMPLATES = [
+  (a,l,e)=>`${a} yaparken ${l}'nda bir ${e.emoji} ${e.name} karşına çıkıyor! Gözleri kırmızı, dişleri keskin. Savaş kaçınılmaz görünüyor.`,
+  (a,l,e)=>`${l}'nın derinliklerinde ${a} ararken yerden bir uğultu yükseliyor. ${e.emoji} ${e.name} gölgelerden sıyrılıyor.`,
+  (a,l,e)=>`${a} ile ilerlerken ${e.emoji} ${e.name} yolunu kesiyor. "${l}'ndan geçmek istiyorsan benimle savaşmalısın!" diye bağırıyor.`,
+];
+const WORLD_TEMPLATES = [
+  l=>`${l}'nda rüzgar uğulduyor, ağaçlar hışırdıyor. Havada tehlike kokusu var.`,
+  l=>`${l} sisle kaplı. Adımların yankılanıyor, gözlerin karanlığa alışmaya çalışıyor.`,
+  l=>`${l}'nın taşları yüzyıllık hikayeleri barındırıyor. Her köşede bir sır saklı.`,
+];
+const LOOT_TEMPLATES = [
+  (e,i)=>`${e.name}'ı yendikten sonra ${i} buluyorsun! Envanterine eklendi.`,
+  (e,i)=>`${e.name}'ın çantasında ${i} var. Şansın varmış!`,
+];
+
+let player = {};
+let history = [];
+let currentEnemy = null;
+let inBattle = false;
+
+function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+function startGame(){
+  const name = document.getElementById("heroName").value.trim() || "Kahraman";
+  player = { name, hp:100, maxHp:100, level:1, xp:0, location: rand(LOCATIONS), inventory:[] };
+  document.getElementById("setup").style.display = "none";
+  document.getElementById("gameArea").style.display = "block";
+  updateStats();
+  log(`⚔️ ${name} maceraya başladı!`);
+}
+
+function updateStats(){
+  document.getElementById("statName").textContent = player.name;
+  document.getElementById("statHp").textContent = player.hp;
+  document.getElementById("statLv").textContent = player.level;
+  document.getElementById("statXp").textContent = player.xp;
+  document.getElementById("statLoc").textContent = player.location;
+  const inv = document.getElementById("inventoryRow");
+  inv.innerHTML = player.inventory.length ? "🎒 " + player.inventory.map(i=>`<span class="tag">${i}</span>`).join("") : "";
+}
+
+function log(msg){
+  const el = document.getElementById("log");
+  const d = document.createElement("div");
+  d.textContent = msg;
+  el.prepend(d);
+}
+
+function setAgent(id, state){
+  const el = document.getElementById("ag-"+id);
+  el.className = "agent " + state;
+}
+
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function runParallelAgents(action){
+  ["world","story","enemy","loot"].forEach(a => setAgent(a,"running"));
+
+  // Paralel simülasyon — hepsi "aynı anda" çalışır
+  const [world, story, enemy, loot] = await Promise.all([
+    (async()=>{ await delay(randInt(300,800)); setAgent("world","done"); return worldAgent(action); })(),
+    (async()=>{ await delay(randInt(300,800)); setAgent("story","done"); return storyAgent(action); })(),
+    (async()=>{ await delay(randInt(400,900)); setAgent("enemy","done"); return enemyAgent(); })(),
+    (async()=>{ await delay(randInt(200,600)); setAgent("loot","done"); return lootAgent(enemy=>enemy); })(),
+  ]);
+
+  return { world, story, enemy, loot };
+}
+
+function worldAgent(action){
+  return rand(WORLD_TEMPLATES)(player.location);
+}
+
+function storyAgent(action){
+  const e = rand(ENEMIES);
+  currentEnemy = { ...e, hp: e.hp + player.level * 5 };
+  inBattle = true;
+  return rand(STORY_TEMPLATES)(action, player.location, currentEnemy);
+}
+
+function enemyAgent(){
+  if(!currentEnemy) currentEnemy = { ...rand(ENEMIES) };
+  return currentEnemy;
+}
+
+function lootAgent(){
+  const item = rand(ITEMS);
+  return { item, text: rand(LOOT_TEMPLATES)(currentEnemy || {name:"Düşman"}, item) };
+}
+
+async function takeAction(){
+  const input = document.getElementById("actionInput");
+  const btn = document.getElementById("actionBtn");
+  const action = input.value.trim();
+  if(!action || player.hp <= 0) return;
+
+  input.value = "";
+  btn.disabled = true;
+  ["world","story","enemy","loot"].forEach(a => setAgent(a,""));
+
+  log(`👤 ${player.name}: ${action}`);
+
+  const results = await runParallelAgents(action);
+
+  // Savaş mekaniği
+  let scene = "";
+  if(inBattle && currentEnemy){
+    const playerAtk = randInt(10,20) + player.level * 3;
+    const enemyAtk = currentEnemy.atk + randInt(0,5);
+    currentEnemy.hp -= playerAtk;
+    player.hp -= enemyAtk;
+    player.hp = Math.max(0, player.hp);
+
+    if(currentEnemy.hp <= 0){
+      // Kazandı
+      player.xp += currentEnemy.xp;
+      if(player.xp >= player.level * 100){ player.level++; player.xp=0; log(`⭐ Seviye atladın! Lv ${player.level}`); }
+      player.inventory.push(results.loot.item);
+      player.location = rand(LOCATIONS);
+      scene = `${results.world}\n\n${results.story}\n\n⚔️ ${playerAtk} hasar verdin! ${currentEnemy.emoji} ${currentEnemy.name} yenildi!\n\n${results.loot.text}\n\n📍 Yeni bölge: ${player.location}`;
+      inBattle = false; currentEnemy = null;
+    } else {
+      scene = `${results.world}\n\n${results.story}\n\n⚔️ ${playerAtk} hasar verdin! ${currentEnemy.emoji} ${currentEnemy.name} HP: ${currentEnemy.hp}\n💔 ${enemyAtk} hasar aldın! HP: ${player.hp}`;
+    }
+  } else {
+    player.location = rand(LOCATIONS);
+    scene = `${results.world}\n\n${results.story}`;
+  }
+
+  document.getElementById("storyBox").textContent = scene;
+  history.push(action);
+  updateStats();
+
+  if(player.hp <= 0){
+    document.getElementById("storyBox").textContent += "\n\n💀 Yenildin! Sayfa yenile ve tekrar dene.";
+    btn.disabled = true;
+    return;
+  }
+
+  btn.disabled = false;
+  input.focus();
+}
+</script>
+</body>
+</html>
